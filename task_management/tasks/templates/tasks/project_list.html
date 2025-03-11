@@ -1,0 +1,46 @@
+{% extends 'tasks/base.html' %}
+
+{% block title %}My Projects | Task Management{% endblock %}
+
+{% block content %}
+<div class="row mb-4">
+    <div class="col-md-8">
+        <h1>My Projects</h1>
+    </div>
+    <div class="col-md-4 text-end">
+        <a href="{% url 'admin:tasks_project_add' %}" class="btn btn-primary">New Project</a>
+    </div>
+</div>
+
+{% if projects %}
+<div class="row">
+    {% for project in projects %}
+    <div class="col-md-4 mb-4">
+        <div class="card h-100">
+            <div class="card-header">
+                <h5 class="card-title">{{ project.project_name }}</h5>
+                {% if project.is_completed %}
+                <span class="badge bg-success">Completed</span>
+                {% else %}
+                <span class="badge bg-primary">Active</span>
+                {% endif %}
+            </div>
+            <div class="card-body">
+                {% with task_count=project.tasks.count %}
+                <p>{{ task_count }} task{{ task_count|pluralize }}</p>
+                {% endwith %}
+            </div>
+            <div class="card-footer">
+                <a href="{% url 'project_detail' project.pk %}" class="btn btn-outline-primary btn-sm">View Details</a>
+                <a href="{% url 'admin:tasks_project_change' project.pk %}" class="btn btn-outline-secondary btn-sm">Edit</a>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% else %}
+<div class="alert alert-info">
+    <p>You haven't created any projects yet. Click the "New Project" button to get started.</p>
+</div>
+{% endif %}
+{% endblock %}

@@ -50,3 +50,11 @@ class Attachment(models.Model):
     
     def __str__(self):
         return self.file_name
+    
+class EmployeeProfile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='employee_profile')
+    position = models.CharField(max_length=100, blank=True, null=True)
+    checked_in_at = models.DateTimeField(blank=True, null=True)
+
+    def __str__(self):
+        return f"{self.user.first_name} {self.user.last_name}"

@@ -1,12 +1,16 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.models import User
 from .models import Project, Task, Comment, Attachment
 from .forms import ProjectForm, TaskForm, CommentForm  
 from django.http import JsonResponse
-from .serializers import ProjectSerializer, TaskSerializer, AttachmentSerializer, CommentSerializer
-from rest_framework.decorators import api_view
+from .serializers import ProjectSerializer, TaskSerializer, AttachmentSerializer, CommentSerializer, EmployeeSerializer
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.views import APIView
+from .serializers import GoogleAuthSerializer
  
 @api_view(['GET', 'POST'])
 @login_required
@@ -173,3 +177,58 @@ def attachment_detail(request, pk, format=None):
     elif request.method == 'DELETE':
         attachment.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
+
+class GoogleLoginView(APIView):
+    def post(self, request):
+        serializer = GoogleAuthSerializer(data=request.data)
+        if serializer.is_valid():
+            return Response(serializer.validated_data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+@api_view(['GET', 'POST'])
+@permission_classes([IsAuthenticated])
+def employee_list(request, format=None):
+    if request.method == 'GET':
+        employees = User.objects.filter(is_active=True)
+        serializer = EmployeeSerializer(employees, many=True)
+        return Response(serializer.data)
+
+    if request.method == 'POST':
+        first_name = request.data.get('first_name', '')
+        last_name = request.data.get('last_name', '')
+        email = request.data.get('email')
+
+        if not email:
+            return Response({'error': 'Email is required'}, status=400)
+
+        user = User.objects.create_user(
+            username=email,
+            email=email,
+            first_name=first_name,
+            last_name=last_name,
+            password='default123'  # Replace or prompt password reset
+        )
+        return Response(EmployeeSerializer(user).data, status=201)
+
+@api_view(['GET', 'PUT', 'DELETE'])
+@permission_classes([IsAuthenticated])
+def employee_detail(request, pk, format=None):
+    try:
+        employee = User.objects.get(pk=pk)
+    except User.DoesNotExist:
+        return Response({'error': 'User not found'}, status=404)
+
+    if request.method == 'GET':
+        serializer = EmployeeSerializer(employee)
+        return Response(serializer.data)
+
+    elif request.method == 'PUT':
+        employee.first_name = request.data.get('first_name', employee.first_name)
+        employee.last_name = request.data.get('last_name', employee.last_name)
+        employee.email = request.data.get('email', employee.email)
+        employee.save()
+        return Response(EmployeeSerializer(employee).data)
+
+    elif request.method == 'DELETE':
+        employee.delete()
+        return Response(status=204)
